@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "es2018",
+    "module": "commonjs",
+    "sourceMap": true,
+    "outDir": "./public",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "incremental": true,
+    "allowJs": true,
+    "tsBuildInfoFile": ".tsmain.tsbuildinfo",
+    "downlevelIteration": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitThis": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "inlineSources": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["static/**/*.ts", "static/main.d.ts"],
+  "exclude": ["static/renderer.*"]
+}
