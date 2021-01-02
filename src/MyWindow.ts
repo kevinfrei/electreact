@@ -26,6 +26,7 @@ export function ShowOpenDialog(
 ): string[] | undefined {
   return window.remote!.dialog.showOpenDialogSync(options);
 }
+
 export function SetInit(func: () => void): void {
   window.initApp = func;
 }
