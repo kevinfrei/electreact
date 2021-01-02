@@ -155,7 +155,7 @@ export function CommsSetup(): void {
   // These are the general "just asking for something to read/written to disk"
   // functions. Media Info, Search, and MusicDB stuff needs a different handler
   // because they don't just read/write to disk.
+  */
   register('read-from-storage', readFromStorage);
   register('write-to-storage', writeToStorage);
-  */
 }
