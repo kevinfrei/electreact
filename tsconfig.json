@@ -1,27 +1,21 @@
 {
   "compilerOptions": {
-    "noFallthroughCasesInSwitch": false,
-    "jsx": "react-jsx",
-    "target": "es5",
-    "module": "esnext",
-    "sourceMap": true,
-    "downlevelIteration": true,
-    "strict": true,
-    "incremental": true /* Enable incremental compilation */,
-    "tsBuildInfoFile": ".tsweb.tsbuildinfo" /* Specify file to store incremental compilation information */,
-    // "noImplicitAny": true,
-    "strictNullChecks": true,
-    "noImplicitThis": true,
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
+    "target": "es2020",
     "lib": ["dom", "dom.iterable", "esnext"],
+    "sourceMap": true,
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "jsx": "react-jsx"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src"]
 }

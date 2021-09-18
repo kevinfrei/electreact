@@ -3,17 +3,40 @@
 // All of the Node.js APIs are available in this process.
 
 import { MakeError } from '@freik/core-utils';
-import { IpcRenderer, ipcRenderer, remote } from 'electron';
-import isDev from 'electron-is-dev';
+import { clipboard, IpcRenderer, ipcRenderer } from 'electron';
+import { ObjectEncodingOptions, OpenMode, PathLike, promises as fsp } from 'fs';
+import { FileHandle } from 'fs/promises';
+//import isDev from 'electron-is-dev';
+
+const isDev = true;
 
 const err = MakeError('renderer-err');
 
+type ReadFile1 = (
+  path: PathLike | FileHandle,
+  options?: { encoding?: null; flag?: OpenMode } | null,
+) => Promise<Buffer>;
+
+type ReadFile2 = (
+  path: PathLike | FileHandle,
+  options: { encoding: BufferEncoding; flag?: OpenMode } | BufferEncoding,
+) => Promise<string>;
+
+type ReadFile3 = (
+  path: PathLike | FileHandle,
+  options?:
+    | (ObjectEncodingOptions & { flag?: OpenMode })
+    | BufferEncoding
+    | null,
+) => Promise<string | Buffer>;
+
 interface MyWindow extends Window {
   ipc: IpcRenderer | undefined;
-  remote: Electron.Remote | undefined;
   isDev: boolean | undefined;
   initApp: undefined | (() => void);
   ipcSet: boolean | undefined;
+  clipboard: Electron.Clipboard | undefined;
+  readFile: ReadFile1 | ReadFile2 | ReadFile3;
 }
 
 declare let window: MyWindow;
@@ -23,16 +46,13 @@ declare let window: MyWindow;
 // calls the function to start the app, thus ensuring that the app has access
 // to the ipcRenderer to enable asynchronous callbacks to affect the Undux store
 
-window.addEventListener('DOMContentLoaded', () => {
-  // eslint-disable-next-line no-debugger
-  if (false) debugger;
+// Yeah, this is unsafe
+// Should eventually is contextBridge.exposeInMainWorld
+// If I change that around, then I can switch contextIsolation in window.ts
+// to false
 
+window.addEventListener('DOMContentLoaded', () => {
   window.ipc = ipcRenderer;
-  if (remote) {
-    window.remote = remote;
-  } else {
-    err('remote is falsy :(');
-  }
   if (isDev) {
     window.isDev = isDev;
   }
@@ -41,4 +61,6 @@ window.addEventListener('DOMContentLoaded', () => {
   } else {
     err('FAILURE: No window.initApp() attached.');
   }
+  window.clipboard = clipboard;
+  window.readFile = fsp.readFile;
 });

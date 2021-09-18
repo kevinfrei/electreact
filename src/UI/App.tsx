@@ -1,12 +1,16 @@
 import { RecoilRoot } from 'recoil';
-import './App.css';
-import logo from './logo.svg';
-import { Utilities } from './Recoil/Helpers';
+import logo from '../logo.svg';
+import './styles/App.css';
+import Utilities, { Spinner } from './Utilities';
 
-function App() {
+export default function App(): JSX.Element {
   return (
     <RecoilRoot>
-      <Utilities />
+      <span id="grabber">
+        <Spinner label="Brief Communication. Please standby...">
+          <Utilities />
+        </Spinner>
+      </span>
       <div className="App">
         <header className="App-header">
           <img src={logo} className="App-logo" alt="logo" />
@@ -35,5 +39,3 @@ function App() {
     </RecoilRoot>
   );
 }
-
-export default App;

@@ -1,7 +1,5 @@
-import { MakeLogger } from '@freik/core-utils';
-import { asyncSend, CommsSetup } from './Communication';
-
-const log = MakeLogger('Startup', true);
+import { CommsSetup } from './Communication';
+import { Persistence } from './persist';
 
 /**
  * Called to set stuff up before *anything* else has been done.
@@ -12,11 +10,5 @@ export function InitBeforeAnythingElse(): void {
 
 // This is awaited upon initial window creation
 export async function WindowStartup(): Promise<void> {
-  log('Window Startup Invoked!');
-  setInterval(() => {
-    const now = new Date();
-    const str = now.toTimeString();
-    const trimmed = str.substr(0, str.indexOf(' '));
-    asyncSend({ 'main-process-status': trimmed });
-  }, 1000);
+  const locs = await Persistence.getItemAsync('locations');
 }

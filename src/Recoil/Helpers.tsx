@@ -1,9 +1,20 @@
-import { FTON, FTONData, MakeError, MakeLogger, Type } from '@freik/core-utils';
-import { Suspense, useEffect, useState } from 'react';
+import { IDetailsList } from '@fluentui/react';
 import {
+  MakeError,
+  MakeLogger,
+  Pickle,
+  Type,
+  Unpickle,
+} from '@freik/core-utils';
+import { useEffect, useState } from 'react';
+import {
+  atom,
   AtomEffect,
+  CallbackInterface,
   DefaultValue,
   RecoilState,
+  selectorFamily,
+  SerializableParam,
   SetterOrUpdater,
   useRecoilState,
 } from 'recoil';
@@ -14,8 +25,7 @@ import {
   Unsubscribe,
   WriteToStorage,
 } from '../ipc';
-import logo from '../logo.svg';
-import { InitialWireUp } from '../MyWindow';
+import { Fail, onRejected } from '../Tools';
 
 export type StatePair<T> = [T, SetterOrUpdater<T>];
 
@@ -29,6 +39,39 @@ export type DialogState = [() => void, DialogData];
 const log = MakeLogger('helpers');
 const err = MakeError('helpers-err');
 
+export function MakeSetSelector<T extends SerializableParam>(
+  setOfObjsState: RecoilState<Set<T>>,
+  key: string,
+): (param: T) => RecoilState<boolean> {
+  return selectorFamily<boolean, T>({
+    key,
+    get:
+      (item: T) =>
+      ({ get }) =>
+        get(setOfObjsState).has(item),
+    set:
+      (item: T) =>
+      ({ set }, newValue) =>
+        set(setOfObjsState, (prevVal: Set<T>) => {
+          const newSet = new Set<T>(prevVal);
+          if (newValue) {
+            newSet.delete(item);
+          } else {
+            newSet.add(item);
+          }
+          return newSet;
+        }),
+  });
+}
+
+export function MakeSetState<T extends SerializableParam>(
+  key: string,
+  //  from: RecoilState<Iterable<T>>
+): [RecoilState<Set<T>>, (param: T) => RecoilState<boolean>] {
+  const theAtom = atom({ key, default: new Set<T>() });
+  return [theAtom, MakeSetSelector(theAtom, key + ':sel')];
+}
+
 /**
  * A short cut for on/off states to make some things (like dialogs) cleaner
  *
@@ -39,14 +82,24 @@ export function useBoolState(initial: boolean): BoolState {
   return [state, () => setState(false), () => setState(true)];
 }
 
-export function useBoolRecoilState(atom: RecoilState<boolean>): BoolState {
-  const [state, setState] = useRecoilState(atom);
+export function useBoolRecoilState(theAtom: RecoilState<boolean>): BoolState {
+  const [state, setState] = useRecoilState(theAtom);
   return [state, () => setState(false), () => setState(true)];
 }
 
 export function useDialogState(): DialogState {
   const [isHidden, setHidden] = useState(true);
   return [() => setHidden(false), [isHidden, () => setHidden(true)]];
+}
+
+export function useListener(
+  message: string,
+  listener: (args: unknown) => void,
+): void {
+  useEffect(() => {
+    const subKey = Subscribe(message, listener);
+    return () => Unsubscribe(subKey);
+  });
 }
 
 export type AtomEffectParams<T> = {
@@ -86,40 +139,96 @@ export function translateToMainEffect<T>(
             }
           }
         })
-        .catch((rej) => {
-          err(`${node.key} Get failed in translateToMainEffect`);
-          err(rej);
-        });
+        .catch(onRejected(`${node.key} Get failed in translateToMainEffect`));
     }
     onSet((newVal, oldVal) => {
       if (newVal instanceof DefaultValue) {
         return;
       }
       const newStr = toString(newVal);
-      if (oldVal instanceof DefaultValue || newStr !== toString(oldVal))
-        WriteToStorage(node.key, newStr).catch((reason) => {
-          err(`${node.key} save to main failed`);
-        });
+      if (oldVal instanceof DefaultValue || newStr !== toString(oldVal)) {
+        WriteToStorage(node.key, newStr).catch(
+          onRejected(`${node.key} save to main failed`),
+        );
+      }
     });
+  };
+}
+
+export function oneWayFromMainEffect<T>(
+  get: () => T | Promise<T>,
+  asyncKey: string,
+  asyncHandler: (data: any) => T | undefined,
+): AtomEffect<T>;
+
+export function oneWayFromMainEffect<T>(
+  get: () => T | Promise<T>,
+): AtomEffect<T>;
+
+export function oneWayFromMainEffect<T>(
+  get: () => T | Promise<T>,
+  asyncKey?: string,
+  asyncHandler?: (data: any) => T | undefined,
+): AtomEffect<T> {
+  return ({
+    node,
+    trigger,
+    setSelf,
+    onSet,
+  }: AtomEffectParams<T>): (() => void) | void => {
+    if (trigger === 'get') {
+      const res = get();
+      if (!Type.isPromise(res)) {
+        setSelf(res);
+      } else {
+        res
+          .then(setSelf)
+          .catch(onRejected(`${node.key} Get failed in oneWayFromMain`));
+      }
+    }
+    let lKey: ListenKey | null = null;
+    if (asyncKey && asyncHandler) {
+      lKey = Subscribe(asyncKey, (val: unknown) => {
+        const theRightType = asyncHandler(val);
+        if (theRightType) {
+          log(`Async data for ${node.key}:`);
+          log(theRightType);
+          setSelf(theRightType);
+        } else {
+          err(`Async invalid data received for ${node.key}:`);
+          err(val);
+        }
+      });
+    }
+    onSet((newVal, oldVal) => {
+      if (newVal instanceof DefaultValue) {
+        return;
+      }
+      Fail(`Invalid assignment to server-side-only atom ${node.key}`);
+    });
+    if (asyncKey) {
+      return () => {
+        if (lKey) {
+          log(`Unsubscribing listener for ${asyncKey}`);
+          Unsubscribe(lKey);
+        }
+      };
+    }
   };
 }
 
 /**
  * An Atom effect to acquire the value from main, and save it back when
- * modified, after processing it from the original type to FTON (JSON).
+ * modified, after processing it from the original type to JSON using Pickling.
  *
- * @param {(val: T) => FTONData} toFton
- * The function to convert T to FTON data
- * @param {(val: FTONData) => T | void} fromFton
- * The funciton to convert FTON data to T or void if it's malformed
  * @param {boolean} asyncUpdates
  * Optionally true if you also need to actively respond to server changes
  *
  * @returns an AtomEffect<T>
  */
 export function bidirectionalSyncWithTranslateEffect<T>(
-  toFton: (val: T) => FTONData,
-  fromFton: (val: FTONData) => T | void,
+  toPickleable: (val: T) => unknown,
+  fromUnpickled: (val: unknown) => T | void,
   asyncUpdates?: boolean,
 ): AtomEffect<T> {
   return ({
@@ -136,7 +245,7 @@ export function bidirectionalSyncWithTranslateEffect<T>(
           if (value) {
             log(value);
             log('***');
-            const data = fromFton(FTON.parse(value));
+            const data = fromUnpickled(Unpickle(value));
             log(data);
             if (data) {
               log(`Setting Self for ${node.key}`);
@@ -144,15 +253,12 @@ export function bidirectionalSyncWithTranslateEffect<T>(
             }
           }
         })
-        .catch((rej) => {
-          err(`${node.key} Get failed in bidirectional sync`);
-          err(rej);
-        });
+        .catch(onRejected(`${node.key} Get failed in bidirectional sync`));
     }
     let lKey: ListenKey | null = null;
     if (asyncUpdates) {
-      lKey = Subscribe(node.key, (val: FTONData) => {
-        const theRightType = fromFton(val);
+      lKey = Subscribe(node.key, (val: unknown) => {
+        const theRightType = fromUnpickled(val);
         if (theRightType) {
           log(`Async data for ${node.key}:`);
           log(theRightType);
@@ -167,15 +273,15 @@ export function bidirectionalSyncWithTranslateEffect<T>(
       if (newVal instanceof DefaultValue) {
         return;
       }
-      const newFton = toFton(newVal);
+      const newPickled = Pickle(toPickleable(newVal));
       if (
         oldVal instanceof DefaultValue ||
-        !FTON.valEqual(toFton(oldVal), newFton)
+        Pickle(toPickleable(oldVal)) !== newPickled
       ) {
         log(`Saving ${node.key} back to server...`);
-        WriteToStorage(node.key, FTON.stringify(newFton))
+        WriteToStorage(node.key, newPickled)
           .then(() => log(`${node.key} saved properly`))
-          .catch((reason) => err(`${node.key} save to main failed`));
+          .catch(onRejected(`${node.key} save to main failed`));
       }
     });
 
@@ -192,8 +298,8 @@ export function bidirectionalSyncWithTranslateEffect<T>(
 
 export function syncWithMainEffect<T>(asyncUpdates?: boolean): AtomEffect<T> {
   return bidirectionalSyncWithTranslateEffect<T>(
-    (a) => (a as unknown) as FTONData,
-    (b) => (b as unknown) as T,
+    (a) => a as unknown,
+    (a) => a as T,
     asyncUpdates,
   );
 }
@@ -225,47 +331,56 @@ export function getAtomValuesEffect(): void {
   }
 }
 
-// This is a react component to enable the IPC subsystem to talk to the store,
-// keep track of which mode we're in, and generally deal with "global" silliness
-export function Utilities(): JSX.Element {
-  useEffect(InitialWireUp);
-  useEffect(() => {
-    const key = Subscribe('main-process-status', (val: FTONData) => {
-      if (Type.isString(val)) {
-        log(`Main status: ${val}`);
-      } else {
-        err('Invalid value in main-process-status:');
-        err(val);
-      }
-    });
-    return () => Unsubscribe(key);
-  });
-  /*
-  const handleWidthChange = useRecoilCallback(
-    ({ set }) => (ev: MediaQueryList | MediaQueryListEvent) => {
-      // Do something with the media query change here if you'd like
-      // i.e. set(isMiniplayerState, ev.matches);
-    },
-  );
-  useEffect(() => {
-    SubscribeMediaMatcher('(max-width: 499px)', handleWidthChange);
-    return () => UnsubscribeMediaMatcher(handleWidthChange);
-  });
-  */
-  return <></>;
+interface KeyEventType {
+  key: string;
 }
 
-export type SpinnerProps = {
-  children: JSX.Element | JSX.Element[];
-  label?: string;
-};
+type KeyboardHookType<T extends KeyEventType> = (
+  cbIntfc: CallbackInterface,
+) => (ev: T) => void;
 
-export function Spinner({ children, label }: SpinnerProps): JSX.Element {
-  const theSpinner = (
-    <div>
-      <img src={logo} className="App-logo" alt="logo" />
-      {label ? label : 'Please wait...'}
-    </div>
-  );
-  return <Suspense fallback={theSpinner}>{children}</Suspense>;
+let lastHeard = performance.now();
+
+export function keyboardHook<T extends KeyEventType>(
+  filterState: RecoilState<string>,
+): KeyboardHookType<T> {
+  return ({ set }: CallbackInterface) =>
+    (ev: T) => {
+      err(ev.key);
+      if (ev.key.length > 1 || ev.key === ' ') {
+        set(filterState, '');
+        return;
+      }
+      const time = performance.now();
+      const clear: boolean = time - lastHeard > 750;
+      lastHeard = time;
+      set(filterState, (curVal) => (clear ? ev.key : curVal + ev.key));
+    };
+}
+
+export function kbHook<T extends KeyEventType>(
+  filterState: RecoilState<string>,
+  listRef: IDetailsList | null,
+  shouldFocus: () => boolean,
+  getIndex: (srch: string) => number,
+) {
+  return ({ set }: CallbackInterface) =>
+    (ev: T): void => {
+      if (ev.key.length > 1 || ev.key === ' ') {
+        set(filterState, '');
+        return;
+      }
+      const time = performance.now();
+      const clear: boolean = time - lastHeard > 750;
+      lastHeard = time;
+      // const newFilter = clear ? ev.key : keyFilter + ev.key;
+      set(filterState, (oldVal): string => {
+        const srchString = clear ? ev.key : oldVal + ev.key;
+        if (shouldFocus() && listRef !== null && srchString.length > 0) {
+          const index = getIndex(srchString);
+          listRef.focusIndex(index);
+        }
+        return srchString;
+      });
+    };
 }
