@@ -1,9 +1,10 @@
 // This is for getting at "global" stuff from the window object
-import { MakeError, MakeLogger, Type } from '@freik/core-utils';
+import { isString } from '@freik/typechk';
+import debug from 'debug';
 import { OpenDialogSyncOptions } from 'electron/main';
 
-const log = MakeLogger('MyWindow-mock');
-const err = MakeError('MyWindow-mock-err');
+const log = debug('app:MyWindow:mock:log');
+const err = debug('app:MyWindow:mock:err');
 
 export function ShowOpenDialog(
   options: OpenDialogSyncOptions,
@@ -94,11 +95,11 @@ function MockWrite(key?: string): Promise<void> {
 
 function MockRead(key?: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    if (Type.isString(key)) {
+    if (isString(key)) {
       log(`Reading '${key}' from Mock`);
       const res = fakeStorage.get(key);
       log(`Next Tick: Reading ${key ? key : '?unk?'}: ${res ? res : '?und?'}`);
-      if (Type.isString(res)) {
+      if (isString(res)) {
         log('Resolving!');
         resolve(res);
       }

@@ -1,11 +1,12 @@
-import { MakeError, MakeLogger, Type } from '@freik/core-utils';
+import { is2TupleOf, isString } from '@freik/typechk';
+import debug from 'debug';
 import { ipcMain, OpenDialogOptions, shell } from 'electron';
-import { IpcMainInvokeEvent, Menu } from 'electron/main';
+import { IpcMainInvokeEvent } from 'electron/main';
 import { Persistence } from './persist';
 import { SendToMain, ShowOpenDialog } from './window';
 
-const log = MakeLogger('Communication');
-const err = MakeError('Communication-err');
+const log = debug('app:Communication:log');
+const err = debug('app:Communication:error');
 
 type Handler<R, T> = (arg: T) => Promise<R | void>;
 
@@ -102,7 +103,7 @@ export function AsyncSend(message: unknown): void {
 }
 
 function isKeyValue(obj: any): obj is [string, string] {
-  return Type.is2TupleOf(obj, Type.isString, Type.isString);
+  return is2TupleOf(obj, isString, isString);
 }
 
 // I don't actually care about this type :)
@@ -111,7 +112,7 @@ function isVoid(obj: any): obj is void {
 }
 
 function isStrOrUndef(obj: any): obj is string | undefined {
-  return Type.isString(obj) || obj === undefined;
+  return isString(obj) || obj === undefined;
 }
 
 function isOpenDialogOptions(obj: any): obj is OpenDialogOptions {
@@ -135,10 +136,10 @@ export function CommsSetup(): void {
   // These are the general "just asking for something to read/written to disk"
   // functions. Media Info, Search, and MusicDB stuff needs a different handler
   // because they don't just read/write to disk.
-  registerChannel('read-from-storage', readFromStorage, Type.isString);
+  registerChannel('read-from-storage', readFromStorage, isString);
   registerChannel('write-to-storage', writeToStorage, isKeyValue);
 
   // Reviewed & working properly:
-  registerChannel('show-file', showFile, Type.isString);
+  registerChannel('show-file', showFile, isString);
   registerChannel('show-open-dialog', ShowOpenDialog, isOpenDialogOptions);
 }

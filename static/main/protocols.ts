@@ -1,13 +1,12 @@
-import { MakeLogger } from '@freik/core-utils';
+import debug from 'debug';
 import { protocol, ProtocolRequest, ProtocolResponse } from 'electron';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { Persistence } from './persist';
 
 export type FileResponse = string | ProtocolResponse;
 export type BufferResponse = Buffer | ProtocolResponse;
 
-const log = MakeLogger('protocols');
+const log = debug('app:protocols:log');
 
 const defaultPicPath = path.join(__dirname, '..', 'logo.svg');
 let defaultPicBuffer: BufferResponse | null = null;

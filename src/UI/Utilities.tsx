@@ -13,7 +13,8 @@ import {
   Text,
   Toggle,
 } from '@fluentui/react';
-import { MakeError, Type } from '@freik/core-utils';
+import { isString } from '@freik/typechk';
+import debug from 'debug';
 import { Suspense, useEffect, useState } from 'react';
 import {
   InitialWireUp,
@@ -25,7 +26,7 @@ import { BoolState, useListener } from '../Recoil/Helpers';
 import { MenuHandler } from './MenuHandler';
 import './styles/Utilities.css';
 
-const err = MakeError('Utilities-err'); // eslint-disable-line
+const err = debug('app:Utilities:error'); // eslint-disable-line
 
 // This is a react component to enable the IPC subsystem to talk to the store,
 // keep track of which mode we're in, and generally deal with "global" silliness
@@ -134,7 +135,7 @@ export function Expandable({
     theHeader = (
       <Separator alignContent="start" styles={customStyle}>
         {button}
-        {Type.isString(label) ? <Text variant={v}>&nbsp;{label}</Text> : label}
+        {isString(label) ? <Text variant={v}>&nbsp;{label}</Text> : label}
       </Separator>
     );
   } else {
@@ -142,7 +143,7 @@ export function Expandable({
     theHeader = (
       <Stack horizontal verticalAlign="center" style={{ marginTop: 10 }}>
         {button}
-        {Type.isString(label) ? <Text variant={v}>{label}</Text> : label}
+        {isString(label) ? <Text variant={v}>{label}</Text> : label}
       </Stack>
     );
   }

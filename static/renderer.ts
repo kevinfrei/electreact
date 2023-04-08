@@ -2,7 +2,7 @@
 // be executed in the renderer process for that window.
 // All of the Node.js APIs are available in this process.
 
-import { MakeError } from '@freik/core-utils';
+import debug from 'debug';
 import { clipboard, IpcRenderer, ipcRenderer } from 'electron';
 import { ObjectEncodingOptions, OpenMode, PathLike, promises as fsp } from 'fs';
 import { FileHandle } from 'fs/promises';
@@ -10,7 +10,7 @@ import { FileHandle } from 'fs/promises';
 
 const isDev = true;
 
-const err = MakeError('renderer-err');
+const err = debug('app:renderer:error');
 
 type ReadFile1 = (
   path: PathLike | FileHandle,

@@ -1,4 +1,5 @@
-import { MakeError, Type } from '@freik/core-utils';
+import { isFunction, isString } from '@freik/typechk';
+import debug from 'debug';
 import {
   app,
   BrowserWindow,
@@ -13,7 +14,7 @@ import { AsyncSend } from './Communication';
 import { Persistence } from './persist';
 import { ToggleMiniPlayer } from './window';
 
-const err = MakeError('menu-err'); // eslint-disable-line
+const err = debug('app:menu:error'); // eslint-disable-line
 
 type ClickHandler = (
   mnu: MenuItem,
@@ -30,7 +31,7 @@ function getClick(handler?: ClickHandler | unknown): ClickHandler | undefined {
   if (!handler) {
     return;
   }
-  if (Type.isFunction(handler)) {
+  if (isFunction(handler)) {
     return handler as ClickHandler;
   }
   return () => {
@@ -62,7 +63,7 @@ function action(
   accOrHdlr: string | ClickHandler | unknown | void,
   handler?: ClickHandler | unknown,
 ): MenuItemConstructorOptions {
-  if (Type.isString(accOrHdlr)) {
+  if (isString(accOrHdlr)) {
     return {
       label,
       id: getId(label),

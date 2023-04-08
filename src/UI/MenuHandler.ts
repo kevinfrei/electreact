@@ -1,9 +1,10 @@
-import { MakeError, Type } from '@freik/core-utils';
+import { hasField } from '@freik/typechk';
+import debug from 'debug';
 import { FocusSearch } from '../MyWindow';
 import { MyTransactionInterface } from '../Recoil/api';
 
-const log = MakeError('MenuHandler'); // eslint-disable-line
-const err = MakeError('MenuHandler-err'); // eslint-disable-line
+const log = debug('app:MenuHandler:log'); // eslint-disable-line
+const err = debug('app:MenuHandler:error'); // eslint-disable-line
 
 export function MenuHandler(
   _xact: MyTransactionInterface,
@@ -12,7 +13,7 @@ export function MenuHandler(
   log('Menu command:');
   log(message);
   // I'm not really thrilled with this mechanism. String-based dispatch sucks
-  if (Type.hasStr(message, 'state')) {
+  if (hasField(message, 'state')) {
     switch (message.state) {
       case 'savePlaylist': {
         break;

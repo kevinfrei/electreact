@@ -1,8 +1,8 @@
-import { MakeError, MakeLogger } from '@freik/core-utils';
+import debug from 'debug';
 import { RecoilState, RecoilValueReadOnly, useRecoilCallback } from 'recoil';
 
-const log = MakeLogger('api'); // eslint-disable-line
-const err = MakeError('ReadWrite-err'); // eslint-disable-line
+const log = debug('app:api:log'); // eslint-disable-line
+const err = debug('app:apierror'); // eslint-disable-line
 
 export type MyTransactionInterface = {
   get: <T>(recoilVal: RecoilState<T> | RecoilValueReadOnly<T>) => T;

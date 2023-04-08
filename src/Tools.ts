@@ -1,8 +1,9 @@
 // This is for getting at "global" stuff from the window object
-import { MakeError, MakeLogger, Type } from '@freik/core-utils';
+import { isString } from '@freik/typechk';
+import debug from 'debug';
 
-const log = MakeLogger('Tools');
-const err = MakeError('Tools-err');
+const log = debug('app:Tools:log');
+const err = debug('app:Tools:error');
 
 /*
  * Searching
@@ -54,7 +55,7 @@ export function GetIndexOf<T, E>(
  */
 
 export function isPlaylist(playlist?: string): boolean {
-  return Type.isString(playlist) && playlist.length > 0;
+  return isString(playlist) && playlist.length > 0;
 }
 
 export function RandomInt(max: number): number {
@@ -108,10 +109,10 @@ export function divGrand(val: string): string {
 
 export function Fail(name?: string, message?: string): never {
   const e = new Error();
-  if (Type.isString(name)) {
+  if (isString(name)) {
     e.name = name;
   }
-  if (Type.isString(message)) {
+  if (isString(message)) {
     e.message = message;
   }
   throw e;

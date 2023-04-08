@@ -1,14 +1,21 @@
 // This is for getting at "global" stuff from the window object
 import { ISearchBox } from '@fluentui/react';
-import { MakeError, MakeLogger, Type } from '@freik/core-utils';
+import {
+  hasField,
+  isArray,
+  isArrayOfString,
+  isObjectNonNull,
+  isUndefined,
+} from '@freik/typechk';
+import debug from 'debug';
 import { IpcRenderer, NativeImage } from 'electron';
 import { IpcRendererEvent, OpenDialogSyncOptions } from 'electron/main';
 import { PathLike } from 'fs';
 import { FileHandle } from 'fs/promises';
 import { HandleMessage } from './ipc';
 
-const log = MakeLogger('MyWindow', false && IsDev());
-const err = MakeError('MyWindow-err');
+const log = debug('app:MyWindow:log');
+const err = debug('app:MyWindow:error');
 
 type ReadFile1 = (path: PathLike | FileHandle) => Promise<Buffer>;
 
@@ -31,7 +38,7 @@ declare let window: MyWindow;
 export async function ShowOpenDialog(
   options: OpenDialogSyncOptions,
 ): Promise<string[] | void> {
-  return await CallMain('show-open-dialog', options, Type.isArrayOfString);
+  return await CallMain('show-open-dialog', options, isArrayOfString);
 }
 
 export function SetInit(func: () => void): void {
@@ -63,9 +70,9 @@ export function InitialWireUp(): void {
     // send from the main process
     window.ipc?.on('async-data', (_event: IpcRendererEvent, data: unknown) => {
       if (
-        Type.isArray(data) &&
-        Type.isObject(data[0]) &&
-        Type.has(data[0], 'message')
+        isArray(data) &&
+        isObjectNonNull(data[0]) &&
+        hasField(data[0], 'message')
       ) {
         log('*** Async message formed properly:');
         log(data[0]);
@@ -122,7 +129,7 @@ export async function CallMain<R, T>(
   typecheck: (val: any) => val is R,
 ): Promise<R | void> {
   let result: any;
-  if (!Type.isUndefined(key)) {
+  if (!isUndefined(key)) {
     log(`CallMain("${channel}", "...")`);
     // eslint-disable-next-line
     result = await window.ipc!.invoke(channel, key);

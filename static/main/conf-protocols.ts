@@ -1,10 +1,10 @@
-import { MakeLogger } from '@freik/core-utils';
+import debug from 'debug';
 import { ProtocolRequest, ProtocolResponse } from 'electron';
 
 export type FileResponse = string | ProtocolResponse;
 export type BufferResponse = Buffer | ProtocolResponse;
 
-const log = MakeLogger('configure');
+const log = debug('app:configure:log');
 
 const e404 = { error: 404 };
 

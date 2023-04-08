@@ -1,11 +1,13 @@
-import { MakeError, MakeLogger, SeqNum, Type } from '@freik/core-utils';
+import MakeSeqNum from '@freik/seqnum';
+import { hasField, isObjectNonNull, isString } from '@freik/typechk';
+import debug from 'debug';
 import { CallMain, InvokeMain } from './MyWindow';
 
-const log = MakeLogger('ipc');
-const err = MakeError('ipc-err');
+const log = debug('app:ipc:log');
+const err = debug('app:ipc:error');
 
 export async function ReadFromStorage(key: string): Promise<string | void> {
-  return await CallMain('read-from-storage', key, Type.isString);
+  return await CallMain('read-from-storage', key, isString);
 }
 
 export async function WriteToStorage(key: string, data: string): Promise<void> {
@@ -15,7 +17,7 @@ export async function WriteToStorage(key: string, data: string): Promise<void> {
 export type ListenKey = { key: string; id: string };
 export type MessageHandler = (val: unknown) => void;
 
-const sn = SeqNum('Listen');
+const sn = MakeSeqNum('Listen');
 
 // map of message names to map of id's to funtions
 const listeners = new Map<string, Map<string, MessageHandler>>();
@@ -53,9 +55,9 @@ export function HandleMessage(message: unknown): void {
   // { artists: ..., albums: ..., songs: ... } will invoke listeners for
   // all three of those 'messages'
   let handled = false;
-  if (Type.isObjectNonNull(message)) {
+  if (isObjectNonNull(message)) {
     for (const id in message) {
-      if (Type.isString(id) && Type.has(message, id)) {
+      if (isString(id) && hasField(message, id)) {
         const listener = listeners.get(id);
         if (listener) {
           for (const handler of listener.values()) {

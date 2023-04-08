@@ -1,4 +1,4 @@
-import { MakeError, MakeLogger } from '@freik/core-utils';
+import debug from 'debug';
 import { app } from 'electron';
 import isDev from 'electron-is-dev';
 import { MakeMainMenu } from './menu';
@@ -8,8 +8,8 @@ app.commandLine.appendSwitch('disable-http-cache');
 
 export type OnWindowCreated = () => Promise<void>;
 
-const log = MakeLogger('electronSetup');
-const err = MakeError('electronSetup-err');
+const log = debug('app:electronSetup:log');
+const err = debug('app:electronSetup:error');
 
 async function WhenReady(windowCreated: OnWindowCreated) {
   await app.whenReady();

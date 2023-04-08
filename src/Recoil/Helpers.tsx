@@ -1,11 +1,6 @@
 import { IDetailsList } from '@fluentui/react';
-import {
-  MakeError,
-  MakeLogger,
-  Pickle,
-  Type,
-  Unpickle,
-} from '@freik/core-utils';
+import { isPromise, Pickle, Unpickle } from '@freik/typechk';
+import debug from 'debug';
 import { useEffect, useState } from 'react';
 import {
   atom,
@@ -36,8 +31,8 @@ export type DialogData = [boolean, () => void];
 // A simplifier for dialogs: [0] shows the dialog, [1] is used in the dialog
 export type DialogState = [() => void, DialogData];
 
-const log = MakeLogger('helpers');
-const err = MakeError('helpers-err');
+const log = debug('app:helpers:log');
+const err = debug('app:helpers:error');
 
 export function MakeSetSelector<T extends SerializableParam>(
   setOfObjsState: RecoilState<Set<T>>,
@@ -178,7 +173,7 @@ export function oneWayFromMainEffect<T>(
   }: AtomEffectParams<T>): (() => void) | void => {
     if (trigger === 'get') {
       const res = get();
-      if (!Type.isPromise(res)) {
+      if (!isPromise(res)) {
         setSelf(res);
       } else {
         res

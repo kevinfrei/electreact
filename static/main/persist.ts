@@ -1,4 +1,3 @@
-import { Pickle, Type, Unpickle } from '@freik/core-utils';
 import { MakePersistence } from '@freik/node-utils';
 import { app, Rectangle } from 'electron';
 import path from 'path';

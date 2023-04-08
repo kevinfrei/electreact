@@ -15,12 +15,12 @@ it('Adding empty songs does nothing', () => {
 });
 
 */
-import { MakeError } from '@freik/core-utils';
+import debug from 'debug';
 import { act } from 'react-test-renderer';
 import { RecoilState, RecoilValueReadOnly } from 'recoil';
 import { MyTransactionInterface } from '../api';
 
-const err = MakeError('api.test');
+const err = debug('api:test');
 
 jest.useFakeTimers();
 jest.mock('../../MyWindow');

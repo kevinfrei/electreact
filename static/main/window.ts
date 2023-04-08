@@ -1,4 +1,6 @@
-import { DebouncedEvery, MakeError, Type } from '@freik/core-utils';
+import { DebouncedEvery } from '@freik/sync';
+import { isNumber } from '@freik/typechk';
+import debug from 'debug';
 import { BrowserWindow, dialog, screen } from 'electron';
 import isDev from 'electron-is-dev';
 import { OpenDialogOptions } from 'electron/main';
@@ -16,7 +18,7 @@ import { RegisterListeners, RegisterProtocols } from './protocols';
 // No one should keep any references to the main window (so it doesn't leak)
 // which is the entire reason for this module's existence.
 
-const err = MakeError('window-err');
+const err = debug('app:window:error');
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -64,7 +66,7 @@ export async function CreateWindow(
       nodeIntegration: true,
       webSecurity: !isDev,
       contextIsolation: false,
-      nativeWindowOpen: true,
+      /* nativeWindowOpen: true, */
     },
     // frame: false,
     show: false,
@@ -122,8 +124,8 @@ let prevWidth = 0;
 export function ToggleMiniPlayer(): void {
   if (
     mainWindow !== null &&
-    Type.isNumber(windowPos.bounds.x) &&
-    Type.isNumber(windowPos.bounds.y)
+    isNumber(windowPos.bounds.x) &&
+    isNumber(windowPos.bounds.y)
   ) {
     const display = screen.getDisplayMatching(
       windowPos.bounds as Electron.Rectangle,
